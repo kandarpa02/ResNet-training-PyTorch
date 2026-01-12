@@ -2,7 +2,7 @@ import torch
 
 class Metric(object):
   def __init__(self) -> None:
-    self.value = torch.tensor(0.)
+    self.value = 0.0
     self.count = 0
   
   def update(self, value:float|torch.Tensor):
@@ -11,7 +11,7 @@ class Metric(object):
   
   def mean(self):
     m = self.value/(self.count if self.count != 0 else 1)
-    return m.item()
+    return m
 
 def accuracy(pred, y):
   return (pred.argmax(dim=1) == y).float().mean()
