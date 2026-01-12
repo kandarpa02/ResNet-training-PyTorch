@@ -131,3 +131,5 @@ def trainer(
         )
 
     torch.save(ckpt, ckpt_path)
+
+  return innerfun
