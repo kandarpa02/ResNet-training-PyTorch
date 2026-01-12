@@ -3,7 +3,7 @@ import time
 import os
 
 from .checkpoint import Checkpoint
-from .base import Module_
+from .base import Cell
 from .metric import Metric, accuracy
 from typing import Callable
 
@@ -16,7 +16,7 @@ def trainer(
     epochs:int,
     *,
     ckpt:Checkpoint, 
-    model:Module_, 
+    model:Cell, 
     optimizer:Opt,
     loss_fn:Callable,
     device:torch.device,
@@ -48,7 +48,7 @@ def trainer(
 
   os.makedirs(ckpt_path, exist_ok=True)
 
-  def innerfun(
+  def fit(
       train_loader, val_loader
       ):
     
@@ -75,22 +75,23 @@ def trainer(
       
       def batched_val_step(x, y, auto_cast):
         model.eval()
-        if auto_cast:
-          with autocast(device.type):
+        with torch.no_grad():
+          if auto_cast:
+            with autocast(device.type):
+              pred = model(x)
+              acc = accuracy(pred, y)
+              loss = loss_fn(pred, y)
+
+          else:
             pred = model(x)
             acc = accuracy(pred, y)
             loss = loss_fn(pred, y)
-
-        else:
-          pred = model(x)
-          acc = accuracy(pred, y)
-          loss = loss_fn(pred, y)
-        return loss, acc
+          return loss, acc
       
       for x, y in train_loader:
           x = x.to(device)
           y = y.to(device)
-          optimizer.zero_grad()
+          optimizer.zero_grad(set_to_none=True)
 
           train_loss, train_acc = batched_train_step(x, y, auto_cast=auto_cast)
           t_loss.update(train_loss.item())
@@ -127,7 +128,7 @@ def trainer(
         f"Took:{_time:.2f} "
       )
 
-      if e%save_every_nth!=1:
+      if (e+1)%save_every_nth!=1:
         ckpt.update(
           last_epoch = e+1,
           params_state = model.state_dict(),
@@ -137,4 +138,4 @@ def trainer(
         torch.save(ckpt, f"{ckpt_path}/final_ckpt")
         torch.save(ckpt, f"{ckpt_path}/ckpt{e+1}")
 
-  return innerfun
+  return fit

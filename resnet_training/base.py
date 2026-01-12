@@ -1,7 +1,7 @@
 import torch
 from typing import Optional, Callable
 
-class Module_(torch.nn.Module):
+class Cell(torch.nn.Module):
   def __init__(self):
     super().__init__()
 
@@ -16,7 +16,7 @@ class Module_(torch.nn.Module):
     for p in self.parameters():
       p.requires_grad = True
 
-def compact(obj:Module_):
+def compact(obj:Cell):
   def run(*args):
     out = None
     for i, f in enumerate(obj.__dict__['_modules'].values()):

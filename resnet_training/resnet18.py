@@ -1,9 +1,9 @@
-from .base import Module_
+from .base import Cell
 import torch.nn as nn
 import torch.nn.functional as F
 import torch
 
-class BasicBlock(Module_):
+class BasicBlock(Cell):
   def __init__(self, planes: int, stride: int = 1):
     super().__init__()
 
@@ -41,7 +41,7 @@ class BasicBlock(Module_):
     return self.relu(out)
 
 
-class ResNet18(Module_):
+class ResNet18(Cell):
   def __init__(self, num_classes):
     super().__init__()
 
