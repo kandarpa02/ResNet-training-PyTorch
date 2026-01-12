@@ -7,8 +7,8 @@ from .base import Cell
 from .metric import Metric, accuracy
 from typing import Callable
 
-from torch.amp.autocast_mode import autocast
-from torch.amp.grad_scaler import GradScaler
+from torch import autocast
+from torch import GradScaler
 
 Opt = torch.optim.Optimizer
 
@@ -24,7 +24,67 @@ def trainer(
     save_every_nth:int=1,
     auto_cast:bool=False
     
-    ):
+    ) -> Callable:
+
+  """
+  Trainer factory function with configurable training behavior.
+
+  Arguments:
+    epochs (int): Number of epochs to train the model.
+    ckpt (Checkpoint): Checkpoint object containing last_epoch, param_state,
+      opt_state, and scalar_state for resume-safe training.
+    model (torch.nn.Module): Model instance to be trained.
+    optimizer (torch.optim.Optimizer): Optimizer instance.
+    loss_fn (Callable): Loss function (e.g., torch.nn.CrossEntropyLoss).
+    device (torch.device): Target device, e.g., torch.device("cpu") or
+      torch.device("cuda").
+    ckpt_path (str): Directory path where checkpoints will be saved.
+    save_every_nth (int): Frequency (in epochs) for saving checkpoints.
+    auto_cast (bool): Enable automatic mixed precision using
+      torch.amp.autocast and GradScaler.
+
+  Returns:
+    Callable: A training function that accepts (train_loader, val_loader).
+
+  Example:
+    ```python
+    from resnet_training import ResNet18, trainer, cifar10, Checkpoint, init
+    from torch.utils.data import DataLoader
+    import torch
+
+    # dataset & loaders
+    train_loader = ...
+    val_loader = ...
+
+    model = ResNet18(10)
+    init(model, [1, 3, 32, 32])
+
+    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+    optimizer = torch.optim.SGD(model.parameters(), 0.05, momentum=0.9, nesterov=True)
+    loss_fn = torch.nn.CrossEntropyLoss()
+
+    ckpt = Checkpoint(
+        last_epoch=None,
+        param_state=None,
+        opt_state=None,
+        scalar_state=None,
+    )
+
+    train_fn = trainer(
+        epochs=5,
+        ckpt=ckpt,
+        model=model,
+        optimizer=optimizer,
+        loss_fn=loss_fn,
+        device=device,
+        ckpt_path="./checkpoints",
+        auto_cast=True,
+    )
+
+    train_fn(train_loader, val_loader)
+
+    # Epoch 1/5 Train_Loss:1.98, Val_Loss:1.87 Train_Acc:0.31, Val_Acc:0.33 Took:13.66s
+  """
   
   last_epoch = ckpt.last_epoch
   opt_state = ckpt.opt_state

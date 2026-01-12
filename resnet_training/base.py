@@ -16,17 +16,6 @@ class Cell(torch.nn.Module):
     for p in self.parameters():
       p.requires_grad = True
 
-def compact(obj:Cell):
-  def run(*args):
-    out = None
-    for i, f in enumerate(obj.__dict__['_modules'].values()):
-      if i==0:
-        out = f(*args)
-      else:
-        out = f(out)
-    return out
-  return run
-
 def param_count(model):
   c = 0
   for i in model.parameters(True):
