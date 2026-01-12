@@ -11,3 +11,6 @@ class Metric:
 
   def mean(self):
     return self.value / max(self.count, 1)
+
+def accuracy(pred, y):
+  return (pred.argmax(dim=1) == y).float().mean()
