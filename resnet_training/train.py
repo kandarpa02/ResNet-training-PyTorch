@@ -94,9 +94,11 @@ def trainer(
           optimizer.zero_grad(set_to_none=True)
 
           train_loss, train_acc = batched_train_step(x, y, auto_cast=auto_cast)
-          b_size = x.size(0)
-          t_loss.update(train_loss.item(), b_size)
-          t_acc.update(train_acc.item(), b_size)
+          # b_size = x.size(0)
+          # t_loss.update(train_loss.item(), b_size)
+          # t_acc.update(train_acc.item(), b_size)
+          t_loss.update(train_loss.item())
+          t_acc.update(train_acc.item())
 
           if auto_cast:
             scalar.scale(train_loss).backward()
@@ -110,9 +112,12 @@ def trainer(
           x = x.to(device)
           y = y.to(device)
           val_loss, val_acc = batched_val_step(x, y, auto_cast=auto_cast)
-          b_size = x.size(0)
-          v_loss.update(val_loss.item(), b_size)
-          v_acc.update(val_acc.item(), b_size)
+
+          # b_size = x.size(0)
+          # v_loss.update(val_loss.item(), b_size)
+          # v_acc.update(val_acc.item(), b_size)
+          v_loss.update(val_loss.item())
+          v_acc.update(val_acc.item())
 
 
       t1 = time.time()
