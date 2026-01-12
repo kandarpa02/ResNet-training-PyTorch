@@ -137,7 +137,7 @@ def trainer(
           opt_state = optimizer.state_dict(),
           scalar_state = scalar.state_dict() if auto_cast else None,
         )
-        torch.save(ckpt, f"{ckpt_path}/final_ckpt")
-        torch.save(ckpt, f"{ckpt_path}/ckpt{e+1}")
+        torch.save(ckpt.state_dict(), f"{ckpt_path}/final_ckpt")
+        torch.save(ckpt.state_dict(), f"{ckpt_path}/ckpt{e+1}")
 
   return fit

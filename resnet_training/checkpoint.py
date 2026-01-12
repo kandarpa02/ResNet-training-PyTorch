@@ -13,3 +13,15 @@ class Checkpoint:
   def update(self, **kwargs):
     for k, v in kwargs.items():
       self.__setattr__(k, v)
+
+  def state_dict(self):
+    return {
+      "last_epoch": self.last_epoch,
+      "param_state": self.param_state,
+      "opt_state": self.opt_state,
+      "scalar_state": self.scalar_state,
+    }
+
+  @classmethod
+  def from_state_dict(cls, d):
+    return cls(**d)
