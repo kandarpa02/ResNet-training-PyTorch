@@ -11,6 +11,7 @@ setup(
     url="https://github.com/kandarpa02/ResNet-training-PyTorch.git",
     packages=find_packages(),
     python_requires=">=3.8",
+    install_requires=['torch', 'numpy'],
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
