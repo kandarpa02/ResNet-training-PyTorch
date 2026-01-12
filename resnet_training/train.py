@@ -129,12 +129,12 @@ def trainer(
 
       if e%save_every_nth!=1:
         ckpt.update(
-          last_epoch = e,
+          last_epoch = e+1,
           params_state = model.state_dict(),
           opt_state = optimizer.state_dict(),
           scalar_state = scalar.state_dict() if auto_cast else None,
         )
         torch.save(ckpt, f"{ckpt_path}/final_ckpt")
-        torch.save(ckpt, f"{ckpt_path}/ckpt{e}")
+        torch.save(ckpt, f"{ckpt_path}/ckpt{e+1}")
 
   return innerfun
