@@ -26,3 +26,9 @@ def compact(obj:Module_):
         out = f(out)
     return out
   return run
+
+def param_count(model):
+  c = 0
+  for i in model.parameters(True):
+    c+=i.numel()
+  print(f"{model.__class__.__name__}: {c}")
