@@ -1,5 +1,6 @@
 import torch
 import time
+import os
 
 from .checkpoint import Checkpoint
 from .base import Module_
@@ -44,6 +45,8 @@ def trainer(
 
   START_EPOCHS = last_epoch if last_epoch is not None else 0
   EPOCHS = epochs + START_EPOCHS
+
+  os.makedirs(ckpt_path, exist_ok=True)
 
   def innerfun(
       train_loader, val_loader
@@ -118,7 +121,7 @@ def trainer(
       val_acc = v_acc.mean()
 
       print(
-        f"Epoch {e+1}/{EPOCHS+1} "
+        f"Epoch {e+1}/{EPOCHS} "
         f"Train_Loss:{tr_loss:.4f}, Val_Loss:{val_loss:.4f} "
         f"Train_Acc:{tr_acc:.4f}, Val_Acc:{val_acc:.4f} "
         f"Took:{_time:.2f} "
