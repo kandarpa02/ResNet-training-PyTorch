@@ -86,7 +86,7 @@ def trainer(
       
       for x, y in train_loader:
           x = x.to(device)
-          x = y.to(device)
+          y = y.to(device)
           optimizer.zero_grad()
 
           train_loss, train_acc = batched_train_step(x, y, auto_cast=auto_cast)
