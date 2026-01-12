@@ -119,8 +119,9 @@ def trainer(
 
       print(
         f"Epoch {e+1}/{EPOCHS+1} "
-        f"Train_Loss:{tr_loss:.4f}, Val_Loss:{val_loss:.4f}"
-        f"Train_Acc:{tr_acc:.4f}, Val_Acc:{val_acc:.4f}"
+        f"Train_Loss:{tr_loss:.4f}, Val_Loss:{val_loss:.4f} "
+        f"Train_Acc:{tr_acc:.4f}, Val_Acc:{val_acc:.4f} "
+        f"Took:{_time:.2f} "
       )
 
       if e%save_every_nth!=1:
@@ -130,7 +131,7 @@ def trainer(
           opt_state = optimizer.state_dict(),
           scalar_state = scalar.state_dict() if auto_cast else None,
         )
-
-    torch.save(ckpt, ckpt_path)
+        torch.save(ckpt, f"{ckpt_path}/final_ckpt")
+        torch.save(ckpt, f"{ckpt_path}/ckpt{e}")
 
   return innerfun
