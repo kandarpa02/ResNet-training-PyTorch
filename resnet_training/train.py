@@ -32,7 +32,7 @@ def trainer(
 
   if params_state:
     model.load_state_dict(params_state)
-  model.to(device)
+  model = model.to(device)
   
   if opt_state:
     optimizer.load_state_dict(opt_state)
@@ -85,8 +85,8 @@ def trainer(
         return loss, acc
       
       for x, y in train_loader:
-          x.to(device)
-          y.to(device)
+          x = x.to(device)
+          x = y.to(device)
           optimizer.zero_grad()
 
           train_loss, train_acc = batched_train_step(x, y, auto_cast=auto_cast)
@@ -102,11 +102,12 @@ def trainer(
             optimizer.step()
 
       for x, y in val_loader:
-          x.to(device)
-          y.to(device)
+          x = x.to(device)
+          y = y.to(device)
           val_loss, val_acc = batched_val_step(x, y, auto_cast=auto_cast)
-          t_loss.update(val_loss)
-          t_acc.update(val_acc)
+          v_loss.update(val_loss)
+          v_acc.update(val_acc)
+
 
       t1 = time.time()
 
