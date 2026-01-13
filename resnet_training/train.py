@@ -189,7 +189,7 @@ def trainer(
       if (e+1)%save_every_nth!=1:
         ckpt.update(
           last_epoch = e+1,
-          params_state = model.state_dict(),
+          param_state = model.state_dict(),
           opt_state = optimizer.state_dict(),
           scalar_state = scalar.state_dict() if auto_cast else None,
         )
