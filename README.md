@@ -1,48 +1,80 @@
-# ResNet-training-PyTorch
+# ResNet Training (PyTorch)
 
-This repository contains a PyTorch training pipleline of ResNet18 on CIFAR-10. It a custom `Checkpoint` object to store checkpoints efficiently
+A **minimal, production-oriented PyTorch training core** focused on **correctness, resume-safe checkpointing, and performance**, demonstrated using **ResNet-18 on CIFAR-10**.
 
-(has amp switch, autocast and GradScalar, with proper checkpointing)
+This project is designed for **small research labs and early-stage startups** that want:
+- full control over the training loop
+- explicit, debuggable code
+- AMP performance gains
+- reliable training resumption
 
-## Usage:
+It intentionally avoids high-level abstractions and distributed complexity.
 
-### Imports:
+---
+
+## Key Features
+
+- **Trainer factory pattern** for clean, configurable training
+- **Resume-safe checkpointing** (model, optimizer, AMP scaler, epoch)
+- **Automatic Mixed Precision (AMP)** via `torch.amp.autocast` + `GradScaler`
+- Explicit training & validation loops (no hidden magic)
+- Designed for **single-GPU production workflows**
+
+---
+
+## Usage
+
+### Imports
 ```python
 from resnet_training import ResNet18, trainer, cifar10, Checkpoint, init
 from torch.utils.data import DataLoader
 import torch
-# the model is defined with PyTorch's lazy layers for error-free coding,
-# because of that 'init' function is there
 
+# The model uses PyTorch lazy layers.
+# `init` performs a shape-aware initialization to avoid silent shape errors.
 ```
 
-### Data:
+
+### Data and DataLoader
 ```python 
-train_ds = cifar10(split=(80,20), part=0)
-val_ds = cifar10(split=(80,20), part=1)
+train_ds = cifar10(split=(80, 20), part=0)
+val_ds   = cifar10(split=(80, 20), part=1)
 
-train_loader = DataLoader(train_ds, batch_size=128, shuffle=True, num_workers=2)
-val_loader = DataLoader(val_ds, batch_size=512, shuffle=False, num_workers=2)
-
+train_loader = DataLoader(
+    train_ds, batch_size=128, shuffle=True, num_workers=2
+)
+val_loader = DataLoader(
+    val_ds, batch_size=512, shuffle=False, num_workers=2)
 ```
 
-### Initializing the factory function:
+### Trainer Initialization:
 ```python
 model = ResNet18(10)
 init(model, [1, 3, 32, 32])
-device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
-opt = torch.optim.Adam(model.parameters())
+device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
+optimizer = torch.optim.Adam(model.parameters())
 loss_fn = torch.nn.CrossEntropyLoss()
 
 ckpt = Checkpoint(
-    None,
+    last_epoch=None,
     param_state=None,
     opt_state=None,
-    scalar_state=None
+    scalar_state=None,
 )
-train_func = trainer(50, ckpt=ckpt, model=model, optimizer=opt, loss_fn=loss_fn, device=device, ckpt_path="/content/checkpoint", auto_cast=True)
+
+train_fn = trainer(
+    epochs=50,
+    ckpt=ckpt,
+    model=model,
+    optimizer=optimizer,
+    loss_fn=loss_fn,
+    device=device,
+    ckpt_path="./checkpoints",
+    auto_cast=True,  # Enable AMP
+)
+
 ```
 
 ### Train:
@@ -59,10 +91,32 @@ train_func(train_loader, val_loader)
 # Epoch 8/50 Train_Loss:0.9988, Val_Loss:1.5843 Train_Acc:0.6406, Val_Acc:0.4697 Took:7.46 
 # Epoch 9/50 Train_Loss:0.9301, Val_Loss:1.4589 Train_Acc:0.6657, Val_Acc:0.5219 Took:7.72 
 ```
-### Load Checkpoint:
+### Loading a Checkpoint (Resume Training):
 ```python
 model = ResNet18(10)
-c50 = torch.load("/home/kandarpa-sarkar/Downloads/ckpt50", weights_only=False, map_location=torch.device('cpu'))
-model.load_state_dict(c50['param_state'])
+
+ckpt_state = torch.load(
+    "./checkpoints/ckpt50",
+    map_location=torch.device("cpu"),
+)
+
+model.load_state_dict(ckpt_state["param_state"])
 ```
-See that we have flexible checkpoint management for training resumption and the whole system is greate for single GPU training pipeline
+
+---
+
+*The checkpoint system supports clean training resumption, including optimizer and AMP scaler state when enabled.*
+
+**Design Philosophy**
+
+- Explicit over implicit: no hidden training behavior
+- Resume safety first: checkpoints capture full training state
+- Performance-aware: AMP is a first-class feature
+- Single-GPU focused: optimized for simplicity and reliability
+
+**Non-Goals**
+
+- Distributed multi-node training
+- High-level training abstractions (Lightning, callbacks, YAML configs)
+- Automatic hyperparameter orchestration
+- The training loop is intentionally written in plain PyTorch and can be extended (e.g., with DDP or schedulers) if required.
