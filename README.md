@@ -2,6 +2,8 @@
 
 This repository contains a PyTorch training pipleline of ResNet18 on CIFAR-10. It a custom `Checkpoint` object to store checkpoints efficiently
 
+(has amp switch, autocast and GradScalar, with proper checkpointing)
+
 ## Usage:
 
 ### Imports:
