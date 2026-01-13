@@ -4,7 +4,7 @@ import os
 
 from .checkpoint import Checkpoint
 from .base import Cell
-from .metric import Metric, accuracy
+from .metric import Mean, Accuracy
 from typing import Callable
 
 from torch import autocast
@@ -114,24 +114,22 @@ def trainer(
     
     for e in range(START_EPOCHS, EPOCHS):
       t0 = time.time()
-      t_loss = Metric()
-      v_loss = Metric()
-      t_acc  = Metric()
-      v_acc  = Metric()
+      t_loss = Mean(device=device)
+      v_loss = Mean(device=device)
+      t_acc  = Accuracy(device=device)
+      v_acc  = Accuracy(device=device)
 
       def batched_train_step(x, y, auto_cast):
         model.train()
         if auto_cast:
           with autocast(device.type):
             pred = model(x)
-            acc = accuracy(pred, y)
             loss = loss_fn(pred, y)
 
         else:
           pred = model(x)
-          acc = accuracy(pred, y)
           loss = loss_fn(pred, y)
-        return loss, acc
+        return loss, pred
       
       def batched_val_step(x, y, auto_cast):
         model.eval()
@@ -139,26 +137,22 @@ def trainer(
           if auto_cast:
             with autocast(device.type):
               pred = model(x)
-              acc = accuracy(pred, y)
               loss = loss_fn(pred, y)
 
           else:
             pred = model(x)
-            acc = accuracy(pred, y)
             loss = loss_fn(pred, y)
-          return loss, acc
+          return loss, pred
       
       for x, y in train_loader:
           x = x.to(device)
           y = y.to(device)
           optimizer.zero_grad(set_to_none=True)
 
-          train_loss, train_acc = batched_train_step(x, y, auto_cast=auto_cast)
-          # b_size = x.size(0)
-          # t_loss.update(train_loss.item(), b_size)
-          # t_acc.update(train_acc.item(), b_size)
+          train_loss, train_pred = batched_train_step(x, y, auto_cast=auto_cast)
+
           t_loss.update(train_loss.item())
-          t_acc.update(train_acc.item())
+          t_acc.update(train_pred, y)
 
           if auto_cast:
             scalar.scale(train_loss).backward()
@@ -171,22 +165,19 @@ def trainer(
       for x, y in val_loader:
           x = x.to(device)
           y = y.to(device)
-          val_loss, val_acc = batched_val_step(x, y, auto_cast=auto_cast)
+          val_loss, val_pred = batched_val_step(x, y, auto_cast=auto_cast)
 
-          # b_size = x.size(0)
-          # v_loss.update(val_loss.item(), b_size)
-          # v_acc.update(val_acc.item(), b_size)
           v_loss.update(val_loss.item())
-          v_acc.update(val_acc.item())
+          v_acc.update(val_pred, y)
 
 
       t1 = time.time()
 
       _time = t1-t0
-      tr_loss = t_loss.mean()
-      tr_acc = t_acc.mean()
-      val_loss = v_loss.mean()
-      val_acc = v_acc.mean()
+      tr_loss = t_loss.compute().item()
+      tr_acc = t_acc.compute().item()
+      val_loss = v_loss.compute().item()
+      val_acc = v_acc.compute().item()
 
       print(
         f"Epoch {e+1}/{EPOCHS} "
