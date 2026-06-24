@@ -1,3 +1,5 @@
+from typing import Any
+
 from .base import Cell
 import torch.nn as nn
 import torch.nn.functional as F
