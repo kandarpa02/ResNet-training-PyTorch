@@ -3,6 +3,7 @@ from torch.utils.data import Dataset
 import os
 import gdown
 import numpy as np
+import torch.nn.functional as F
 
 URL = "https://drive.google.com/uc?id=1vqX5FKh7bmvxWL0CYjdo2xJFJ4mx3aqd"
 
@@ -17,9 +18,8 @@ def cifar_download():
   if not os.path.exists(FILEPATH):
     gdown.download(URL, output=FILEPATH, quiet=False)
 
-CIFAR10_MEAN = torch.tensor([0.4914, 0.4822, 0.4465]).view(3, 1, 1)
-CIFAR10_STD  = torch.tensor([0.2470, 0.2435, 0.2616]).view(3, 1, 1)
-
+IMAGENET_MEAN = torch.tensor([0.485, 0.456, 0.406]).view(3, 1, 1)
+IMAGENET_STD  = torch.tensor([0.229, 0.224, 0.225]).view(3, 1, 1)
 
 class cifar10(Dataset):
   """
@@ -64,8 +64,15 @@ class cifar10(Dataset):
     return self.images.shape[0]
 
   def __getitem__(self, idx):
-    img = torch.from_numpy(self.images[idx])
-    img = (img - CIFAR10_MEAN) / CIFAR10_STD
+
+    img = torch.from_numpy(self.images[idx]).float()
+    img = F.interpolate(
+        img.unsqueeze(0),
+        size=(224, 224),
+        mode="bilinear",
+        align_corners=False
+    ).squeeze(0)
+    img = (img - IMAGENET_MEAN) / IMAGENET_STD
 
     label = torch.tensor(self.labels[idx], dtype=torch.long)
     return img, label
