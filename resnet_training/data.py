@@ -45,6 +45,9 @@ class cifar10(Dataset):
       images = c10["x"]   # (N, 3, 32, 32), float32
       labels = c10["y"]   # (N,), int64
 
+      print(c10["x"].dtype)
+      print(c10["x"].min(), c10["x"].max())
+
     N = images.shape[0]
 
     n0 = int(split[0] / 100 * N)
@@ -68,7 +71,7 @@ class cifar10(Dataset):
 
   def __getitem__(self, idx):
 
-    img = torch.from_numpy(self.images[idx]).float()
+    img = torch.from_numpy(self.images[idx]).float() / 255.0
 
     if self.train:
         # Random horizontal flip
@@ -95,3 +98,4 @@ class cifar10(Dataset):
     label = torch.tensor(self.labels[idx], dtype=torch.long)
 
     return img, label
+  
