@@ -30,8 +30,8 @@ STD  = [0.2470, 0.2435, 0.2616]
 train_tf = transforms.Compose([
     transforms.ToPILImage(),
 
-    transforms.RandomResizedCrop(32, scale=(0.6, 1.0)),
-    transforms.RandomHorizontalFlip(),
+    # transforms.RandomResizedCrop(32, scale=(0.6, 1.0)),
+    # transforms.RandomHorizontalFlip(),
 
     transforms.RandAugment(num_ops=2, magnitude=9),
 
