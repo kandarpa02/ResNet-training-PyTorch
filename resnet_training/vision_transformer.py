@@ -9,16 +9,13 @@ class DeiT(nn.Module):
         super().__init__(*args, **kwargs)
         self.model = timm.create_model(
         "deit_small_patch16_224",
-        pretrained=True,
+        pretrained=False,
         num_classes=10
     )
         
     def forward(self, x):
         return self.model(x)
-import torch
-import torch.nn as nn
-
-
+    
 class PatchEmbedding(nn.Module):
     def __init__(
         self,
