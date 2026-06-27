@@ -80,6 +80,16 @@ class cifar10(Dataset):
         img = self.images[idx]
         label = self.labels[idx]
 
+        # -------------------------
+        # FORCE CORRECT FORMAT
+        # -------------------------
+        img = torch.from_numpy(img)
+
+        if img.shape[-1] == 3:  
+            img = img.permute(2, 0, 1)
+
+        assert img.shape == (3, 32, 32), f"Bad shape: {img.shape}"
+
         if self.train:
             img = train_tf(img)
         else:
