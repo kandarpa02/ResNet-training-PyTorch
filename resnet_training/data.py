@@ -1,91 +1,88 @@
 import torch
 from torch.utils.data import Dataset
+import numpy as np
 import os
 import gdown
-import numpy as np
 import torch.nn.functional as F
-from torchvision.transforms import functional as TF
+from torchvision import transforms
 
 
 URL = "https://drive.google.com/uc?id=1vqX5FKh7bmvxWL0CYjdo2xJFJ4mx3aqd"
 
-CACHE_DIR = os.path.expanduser("~/.cache/ResNet-training-PyTorch")
-FILENAME = "cifar10.npz"
-FILEPATH = os.path.join(CACHE_DIR, FILENAME)
+CACHE_DIR = os.path.expanduser("~/.cache/cifar10")
+FILEPATH = os.path.join(CACHE_DIR, "cifar10.npz")
 
 
 def cifar_download():
-  os.makedirs(CACHE_DIR, exist_ok=True)
+    os.makedirs(CACHE_DIR, exist_ok=True)
 
-  if not os.path.exists(FILEPATH):
-    gdown.download(URL, output=FILEPATH, quiet=False)
+    if not os.path.exists(FILEPATH):
+        gdown.download(URL, FILEPATH, quiet=False)
 
-MEAN = torch.tensor([0.49139968, 0.48215827, 0.44653124]).view(3, 1, 1)
-STD  = torch.tensor([0.24703233, 0.24348505, 0.26158768]).view(3, 1, 1)
 
-class cifar10(Dataset):
-  """
-  split:
-    (80,)       -> single split, use 80% of data, part ignored
-    (80, 20)    -> two splits
-                   part=0 -> first 80%
-                   part=1 -> remaining 20%
-  """
-  def __init__(self, split: tuple, part: int = 0, train=True):
-    self.train = train
-    assert len(split) in (1, 2), "split must be (x,) or (x, y)"
-    assert sum(split) == 100, "split percentages must sum to 100"
+MEAN = [0.4914, 0.4822, 0.4465]
+STD  = [0.2470, 0.2435, 0.2616]
 
-    if len(split) == 2:
-      assert part in (0, 1), "part must be 0 or 1 for two-way split"
 
-    cifar_download()
+# -----------------------------
+# TRAIN TRANSFORMS (DeiT style)
+# -----------------------------
+train_tf = transforms.Compose([
+    transforms.ToPILImage(),
 
-    with np.load(FILEPATH) as c10:
-      images = c10["x"]   # (N, 3, 32, 32), float32
-      labels = c10["y"]   # (N,), int64
+    transforms.RandomResizedCrop(32, scale=(0.6, 1.0)),
+    transforms.RandomHorizontalFlip(),
 
-    N = images.shape[0]
+    transforms.RandAugment(num_ops=2, magnitude=9),
 
-    n0 = int(split[0] / 100 * N)
+    transforms.ToTensor(),
+    transforms.Normalize(MEAN, STD),
+])
 
-    if len(split) == 1:
-      # single split
-      self.images = images[:n0]
-      self.labels = labels[:n0]
 
-    else:
-      # two-way split
-      if part == 0:
-        self.images = images[:n0]
-        self.labels = labels[:n0]
-      else:
-        self.images = images[n0:]
-        self.labels = labels[n0:]
+# -----------------------------
+# TEST TRANSFORMS
+# -----------------------------
+test_tf = transforms.Compose([
+    transforms.ToPILImage(),
+    transforms.ToTensor(),
+    transforms.Normalize(MEAN, STD),
+])
 
-  def __len__(self):
-    return self.images.shape[0]
 
-  def __getitem__(self, idx):
+class CIFAR10(Dataset):
+    def __init__(self, split=(80,), part=0, train=True):
+        self.train = train
+        cifar_download()
 
-    img = torch.from_numpy(self.images[idx]).float()
+        with np.load(FILEPATH) as data:
+            images = data["x"]
+            labels = data["y"]
 
-    if self.train:
-        # Random horizontal flip
-        if torch.rand(1).item() < 0.5:
-            img = torch.flip(img, dims=[2])
+        N = len(images)
+        n0 = int(split[0] / 100 * N)
 
-        # Pad then random crop
-        img = F.pad(img.unsqueeze(0), (4, 4, 4, 4), mode="reflect").squeeze(0)
+        if len(split) == 1:
+            self.images = images[:n0]
+            self.labels = labels[:n0]
+        else:
+            if part == 0:
+                self.images = images[:n0]
+                self.labels = labels[:n0]
+            else:
+                self.images = images[n0:]
+                self.labels = labels[n0:]
 
-        top = torch.randint(0, 9, ()).item()
-        left = torch.randint(0, 9, ()).item()
+    def __len__(self):
+        return len(self.images)
 
-        img = img[:, top:top + 32, left:left + 32]
+    def __getitem__(self, idx):
+        img = self.images[idx]
+        label = self.labels[idx]
 
-    img = (img - MEAN) / STD
+        if self.train:
+            img = train_tf(img)
+        else:
+            img = test_tf(img)
 
-    label = torch.tensor(self.labels[idx], dtype=torch.long)
-
-    return img, label
-  
+        return img, torch.tensor(label, dtype=torch.long)
