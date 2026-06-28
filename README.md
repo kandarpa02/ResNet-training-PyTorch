@@ -1,144 +1,67 @@
-# ResNet Training Core (PyTorch)
+# ResNet Training (PyTorch)
 
-A lightweight, production-oriented PyTorch training framework
-demonstrating **correct, reproducible, and resume-safe deep learning
-training** using **ResNet-18 on CIFAR-10**.
+A **minimal, production-oriented PyTorch training core** focused on **correctness, resume-safe checkpointing, and performance**, demonstrated using **ResNet-18 on CIFAR-10**.
 
-The project emphasizes **explicit training logic**, **performance**, and
-**maintainability** over framework abstractions, making it suitable for
-research prototypes, internal tooling, and small-scale production
-workloads.
+This project is designed for **small research labs and early-stage startups** that want:
+- full control over the training loop
+- explicit, debuggable code
+- AMP performance gains
+- reliable training resumption
 
-```{=html}
+It intentionally avoids high-level abstractions and distributed complexity.
+
+---
+
+```
 <p align="center">
 ```
-`<img src="media/output.png" width="900">`{=html}
-```{=html}
+`<img src="media/output.png" width="900">`
+```
 </p>
 ```
 
-------------------------------------------------------------------------
 
-## Highlights
+## Key Features
 
--   Production-style training loop written in plain PyTorch
--   Automatic Mixed Precision (AMP) with `torch.amp.autocast`
--   Resume-safe checkpointing
--   Modular trainer factory
--   Explicit validation pipeline
--   Minimal codebase with no hidden framework logic
--   Easily extensible to schedulers, DDP, or custom metrics
+- **Trainer factory pattern** for clean, configurable training
+- **Resume-safe checkpointing** (model, optimizer, AMP scaler, epoch)
+- **Automatic Mixed Precision (AMP)** via `torch.amp.autocast` + `GradScaler`
+- Explicit training & validation loops (no hidden magic)
+- Designed for **single-GPU production workflows**
 
-------------------------------------------------------------------------
+---
 
-# Training Results
+## Usage
 
-**Model:** ResNet-18
-
-**Dataset:** CIFAR-10
-
-  Metric                                     Value
-  --------------------- --------------------------
-  Epochs                                       200
-  Train Accuracy                        **98.05%**
-  Validation Accuracy                   **79.84%**
-  Train Loss                            **0.0608**
-  Validation Loss                       **0.8029**
-  Average Epoch Time      **≈22.7 s (Tesla P100)**
-
-The included plots visualize:
-
--   Training vs validation accuracy
--   Training vs validation loss
--   Epoch execution time
--   Generalization gap throughout training
-
-------------------------------------------------------------------------
-
-# Features
-
-### Trainer Factory
-
-Creates configurable training functions while keeping the training loop
-explicit and easy to debug.
-
-### Resume-safe Checkpointing
-
-Every checkpoint stores:
-
--   Model parameters
--   Optimizer state
--   AMP GradScaler state
--   Current epoch
-
-allowing training to resume without losing optimizer momentum or
-mixed-precision state.
-
-### Automatic Mixed Precision (AMP)
-
-Native PyTorch AMP support reduces GPU memory usage and improves
-throughput with minimal code changes.
-
-### Explicit Training Pipeline
-
-No callbacks.
-
-No hidden state.
-
-No training framework magic.
-
-Every optimization step is visible and easy to modify.
-
-------------------------------------------------------------------------
-
-# Installation
-
-``` bash
-git clone https://github.com/<username>/<repo>.git
-cd <repo>
-pip install -r requirements.txt
-```
-
-------------------------------------------------------------------------
-
-# Usage
-
-## Imports
-
-``` python
-from resnet_training import (
-    ResNet18,
-    trainer,
-    cifar10,
-    Checkpoint,
-    init,
-)
-
+### Imports
+```python
+from resnet_training import ResNet18, trainer, cifar10, Checkpoint, init
 from torch.utils.data import DataLoader
 import torch
+
+# The model uses PyTorch lazy layers.
+# `init` performs a shape-aware initialization to avoid silent shape errors.
 ```
 
-## Dataset
 
-``` python
+### Data and DataLoader
+```python 
 train_ds = cifar10(split=(80, 20), part=0)
 val_ds   = cifar10(split=(80, 20), part=1)
 
-train_loader = DataLoader(train_ds, batch_size=128, shuffle=True, num_workers=2)
-val_loader = DataLoader(val_ds, batch_size=512, shuffle=False, num_workers=2)
+train_loader = DataLoader(
+    train_ds, batch_size=128, shuffle=True, num_workers=2
+)
+val_loader = DataLoader(
+    val_ds, batch_size=512, shuffle=False, num_workers=2)
 ```
 
-## Model
-
-``` python
+### Trainer Initialization:
+```python
 model = ResNet18(10)
 init(model, [1, 3, 32, 32])
-```
 
-## Trainer
-
-``` python
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
 optimizer = torch.optim.Adam(model.parameters())
 loss_fn = torch.nn.CrossEntropyLoss()
@@ -151,79 +74,58 @@ ckpt = Checkpoint(
 )
 
 train_fn = trainer(
-    epochs=200,
+    epochs=50,
     ckpt=ckpt,
     model=model,
     optimizer=optimizer,
     loss_fn=loss_fn,
     device=device,
     ckpt_path="./checkpoints",
-    auto_cast=True,
+    auto_cast=True,  # Enable AMP
 )
+
 ```
 
-## Train
+### Train:
+```python
+train_func(train_loader, val_loader)
 
-``` python
-train_fn(train_loader, val_loader)
+# Epoch 1/50 Train_Loss:1.7193, Val_Loss:1.5661 Train_Acc:0.3772, Val_Acc:0.4317 Took:7.92 
+# Epoch 2/50 Train_Loss:1.4636, Val_Loss:1.5017 Train_Acc:0.4683, Val_Acc:0.4517 Took:7.71 
+# Epoch 3/50 Train_Loss:1.3390, Val_Loss:1.4681 Train_Acc:0.5159, Val_Acc:0.4612 Took:7.89 
+# Epoch 4/50 Train_Loss:1.2582, Val_Loss:1.4182 Train_Acc:0.5425, Val_Acc:0.5083 Took:7.43 
+# Epoch 5/50 Train_Loss:1.1814, Val_Loss:1.3995 Train_Acc:0.5754, Val_Acc:0.5082 Took:7.38 
+# Epoch 6/50 Train_Loss:1.1208, Val_Loss:1.3720 Train_Acc:0.5960, Val_Acc:0.5215 Took:7.83 
+# Epoch 7/50 Train_Loss:1.0621, Val_Loss:1.2044 Train_Acc:0.6218, Val_Acc:0.5702 Took:7.36 
+# Epoch 8/50 Train_Loss:0.9988, Val_Loss:1.5843 Train_Acc:0.6406, Val_Acc:0.4697 Took:7.46 
+# Epoch 9/50 Train_Loss:0.9301, Val_Loss:1.4589 Train_Acc:0.6657, Val_Acc:0.5219 Took:7.72 
 ```
-
-Example output:
-
-``` text
-Epoch 199/200
-Train Loss : 0.0605
-Val Loss   : 0.8024
-Train Acc  : 98.09%
-Val Acc    : 79.84%
-```
-
-## Resume Training
-
-``` python
+### Loading a Checkpoint (Resume Training):
+```python
 model = ResNet18(10)
 
-checkpoint = torch.load(
-    "./checkpoints/ckpt200",
-    map_location="cpu",
+ckpt_state = torch.load(
+    "./checkpoints/ckpt50",
+    map_location=torch.device("cpu"),
 )
 
-model.load_state_dict(checkpoint["param_state"])
+model.load_state_dict(ckpt_state["param_state"])
 ```
 
-The checkpoint also contains the optimizer state, AMP scaler state, and
-last completed epoch, enabling seamless training resumption.
+---
 
-------------------------------------------------------------------------
+*The checkpoint system supports clean training resumption, including optimizer and AMP scaler state when enabled.*
 
-# Design Philosophy
+**Design Philosophy**
 
--   Explicit over implicit
--   Correctness before abstraction
--   Resume safety as a core feature
--   Performance through native PyTorch
--   Easy to extend without rewriting the training loop
+- Explicit over implicit: no hidden training behavior
+- Resume safety first: checkpoints capture full training state
+- Performance-aware: AMP is a first-class feature
+- Single-GPU focused: optimized for simplicity and reliability
 
-------------------------------------------------------------------------
+**Non-Goals**
 
-# Project Scope
-
-## Included
-
--   ResNet-18 training
--   CIFAR-10 pipeline
--   Mixed precision training
--   Checkpoint management
--   Modular trainer
--   Validation metrics
-
-## Not Included
-
--   Distributed Data Parallel (DDP)
--   Multi-node training
--   Callback systems
--   Configuration frameworks
--   Hyperparameter orchestration
-
-These features can be added incrementally without changing the overall
-project architecture.
+- Distributed multi-node training
+- High-level training abstractions (Lightning, callbacks, YAML configs)
+- Automatic hyperparameter orchestration
+- The training loop is intentionally written in plain PyTorch and can be extended (e.g., with DDP or schedulers) if required.
